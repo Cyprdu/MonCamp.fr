@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Paiement invalide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Lottie -->
+  <script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f0f;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    #failAnimation {
+      width: 220px;
+      height: 220px;
+      margin: 0 auto;
+    }
+
+    p {
+      margin-top: 20px;
+      opacity: 0.85;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="failAnimation"></div>
+    <p>Paiement invalide</p>
+  </div>
+
+  <script>
+    const anim = lottie.loadAnimation({
+      container: document.getElementById('failAnimation'),
+      renderer: 'svg',
+      loop: false,
+      autoplay: true,
+      path: 'fail.json'
+    });
+
+    // Redirection après l'animation
+    setTimeout(() => {
+      window.location.href = 'erreur.html';
+    }, 3000); // ajuste si besoin
+  </script>
+</body>
+</html>

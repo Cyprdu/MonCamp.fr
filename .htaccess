@@ -1,0 +1,30 @@
+# Activer le moteur de réécriture
+RewriteEngine On
+
+# --- RÈGLE 1 : EXCLUSIONS (TRÈS IMPORTANT) ---
+# Ne rien réécrire si la requête est pour un fichier ou un dossier qui existe.
+# Cela protège les fichiers CSS, JS, images, et les scripts d'API/action.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# --- RÈGLE 2 : NETTOYAGE D'URL (Redirection 301) ---
+# Si l'utilisateur a tapé ou cliqué sur une URL qui contient encore .php (ex: /profile.php),
+# le serveur le redirige vers l'URL propre (/profile) pour la barre d'adresse.
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s([^.]+)\.php [NC]
+RewriteRule ^(.*)\.php$ $1 [R=301,L]
+
+# --- RÈGLE 3 : MASQUAGE (Réécriture Interne) ---
+# Transforme l'URL propre (/profile) en nom de fichier réel (profile.php)
+# de manière interne, sans changer l'URL affichée à l'utilisateur.
+# Elle s'applique si le fichier .php correspondant existe.
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^(.*)$ $1.php [NC,L]
+
+# Votre règle ErrorDocument existante
+ErrorDocument 404 /camps/404.php
+# DO NOT REMOVE THIS LINE AND THE LINES BELOW ERRORPAGEID:m2xVPrLyXe
+ErrorDocument 404 /404.html
+# DO NOT REMOVE THIS LINE AND THE LINES ABOVE m2xVPrLyXe:ERRORPAGEID
+

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Validation du paiement</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f0f;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      text-align: center;
+    }
+    #checkAnimation {
+      width: 220px;
+      height: 220px;
+      margin: 0 auto;
+    }
+    p {
+      margin-top: 20px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="checkAnimation"></div>
+    <p>Validation du paiement...</p>
+  </div>
+
+  <script>
+    lottie.loadAnimation({
+      container: document.getElementById('checkAnimation'),
+      renderer: 'svg',
+      loop: false,
+      autoplay: true,
+      path: 'Animation - 1720788531370.json'
+    });
+
+    // Redirection après l'animation
+    setTimeout(() => {
+      window.location.href = 'erreur.html';
+    }, 3000); // ajuste la durée si besoin
+  </script>
+</body>
+</html>
