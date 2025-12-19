@@ -167,7 +167,7 @@ if ('serviceWorker' in navigator) {
                                 <?php if ($is_admin): ?>
                                 <div class="border-t border-gray-100 py-1">
                                     <div class="px-4 py-1 text-xs font-bold text-red-400 uppercase tracking-wider">Administration</div>
-                                    <a href="admin" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold">
+                                    <a href="admin.php" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold">
                                         <i class="fa-solid fa-gauge-high w-6 text-center mr-2"></i> Dashboard Admin
                                     </a>
                                     <a href="admin_messages" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold">

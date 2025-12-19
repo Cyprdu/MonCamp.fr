@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
-$google_client_id = 'AAAAAAAAA';
-$google_client_secret = 'AAAAAAAAAAAAA';
+$google_client_id = '408583558020-k2lmlslr6gmahon2dn02i8qaibp2fspf.apps.googleusercontent.com';
+$google_client_secret = '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';
 $google_redirect_url = 'https://moncamp.fr/api/google_callback.php'; 
 $client = new Google_Client();
 $client->setClientId($google_client_id);

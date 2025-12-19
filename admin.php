@@ -1,190 +1,95 @@
 <?php
-// Fichier: admin_messages.php
+// 1. D'ABORD LA CONFIG (Session start est dedans)
 require_once 'api/config.php';
+
+// 2. SÉCURITÉ
+if (!isset($_SESSION['user']) || empty($_SESSION['user']['is_admin'])) {
+    header('Location: index');
+    exit;
+}
+
+// 3. LOGIQUE
+$error = null;
+
+try {
+    // Récupérer le nombre de demandes d'accès directeur en attente
+    $stmtDirectors = $pdo->query("SELECT COUNT(*) FROM users WHERE is_directeur = 0 AND demande_en_cours = 1");
+    $countDirectors = $stmtDirectors->fetchColumn();
+
+    // Récupérer le nombre de demandes de camps en attente
+    $stmtCamps = $pdo->query("SELECT COUNT(*) FROM camps WHERE en_attente = 1 AND valide = 0 AND refuse = 0");
+    $countCamps = $stmtCamps->fetchColumn();
+    
+    // Récupérer le nombre de demandes de virement en attente (NOUVEAU)
+    $stmtVirements = $pdo->query("SELECT COUNT(*) FROM virements WHERE effectue = 0");
+    $countVirements = $stmtVirements->fetchColumn();
+
+} catch (Exception $e) {
+    $error = "Erreur SQL : " . $e->getMessage();
+}
+
+// 4. AFFICHAGE HTML
 require_once 'partials/header.php';
-
-// Sécurité Admin
-if (!isset($_SESSION['user']) || $_SESSION['user']['is_admin'] != 1) {
-    echo "<script>window.location.href='index.php';</script>";
-    exit();
-}
-
-// TINYMCE (Version CDNJS)
-?>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" integrity="sha512-6JR4bbn8rCKvrkOGMcleNghLnuGYQZIVh2jlFoORJBqc0qOVmOFbRy9pM2f4mMEcBbIKmALBdaVOZcn+tHOkWQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-      tinymce.init({
-        selector: '.rich-editor',
-        height: 300,
-        menubar: false,
-        plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
-        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat',
-        branding: false,
-        promotion: false,
-        content_style: 'body { font-family:Inter,sans-serif; font-size:14px }',
-      });
-  });
-</script>
-<?php
-
-// Fonction Email (SANS LE CONTENU DE LA REPONSE)
-function sendReplyEmail($toEmail, $toName, $question, $token) {
-    // Construction URL
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
-    $baseUrl = $protocol . $_SERVER['HTTP_HOST'];
-    $link = $baseUrl . "/view_reply.php?t=" . $token;
-    
-    $subject = "Une réponse vous attend - ColoMap";
-
-    // TEMPLATE EMAIL TEASING
-    $message = "
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset='UTF-8'>
-        <style>
-            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(90deg, #2563eb, #9333ea); padding: 30px; text-align: center; color: white; }
-            .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
-            .content { padding: 40px 30px; color: #374151; line-height: 1.6; text-align: center; }
-            .question-box { text-align: left; background-color: #f9fafb; border-left: 4px solid #9ca3af; padding: 15px; margin: 20px 0; font-style: italic; color: #6b7280; font-size: 14px; }
-            .btn { display: inline-block; background-color: #2563eb; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 16px; margin-top: 10px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3); }
-            .btn:hover { background-color: #1d4ed8; }
-            .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; }
-        </style>
-    </head>
-    <body>
-        <div class='container'>
-            <div class='header'>
-                <h1>ColoMap Support</h1>
-            </div>
-            <div class='content'>
-                <p style='font-size: 18px;'>Bonjour <strong>$toName</strong>,</p>
-                <p>Notre équipe a traité votre demande concernant :</p>
-                
-                <div class='question-box'>
-                    \"" . nl2br(htmlspecialchars(substr($question, 0, 150))) . "...\"
-                </div>
-
-                <p style='margin-bottom: 25px;'>Pour des raisons de sécurité et de formatage, la réponse est consultable uniquement sur notre plateforme sécurisée.</p>
-
-                <a href='$link' class='btn'>Lire la réponse</a>
-                
-                <p style='margin-top: 30px; font-size: 13px; color: #6b7280;'>Ou copiez ce lien : <a href='$link' style='color:#6b7280;'>$link</a></p>
-            </div>
-            <div class='footer'>
-                <p>&copy; " . date('Y') . " ColoMap. Tous droits réservés.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    ";
-
-    $headers = "MIME-Version: 1.0" . "\r\n";
-    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-    $headers .= "From: ColoMap Support <auth@moncamp.fr>" . "\r\n"; 
-    $headers .= "Reply-To: auth@moncamp.fr" . "\r\n";
-
-    return mail($toEmail, $subject, $message, $headers);
-}
-
-// TRAITEMENT
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_id'])) {
-    $msg_id = intval($_POST['reply_id']);
-    $reponse = $_POST['reponse']; 
-    
-    if (!empty($reponse)) {
-        $stmt = $pdo->prepare("UPDATE contact_messages SET reponse = ?, statut = 'Traité', replied_at = NOW() WHERE id = ?");
-        if($stmt->execute([$reponse, $msg_id])) {
-            $stmt = $pdo->prepare("SELECT * FROM contact_messages WHERE id = ?");
-            $stmt->execute([$msg_id]);
-            $msgData = $stmt->fetch();
-
-            if($msgData) {
-                // On n'envoie plus $reponse dans l'email
-                $sent = sendReplyEmail(
-                    $msgData['email'], 
-                    $msgData['prenom'], 
-                    $msgData['message'], 
-                    $msgData['token']
-                );
-                if($sent) $success = "Réponse enregistrée et notification envoyée !";
-                else $error = "Erreur envoi mail.";
-            }
-        } else {
-            $error = "Erreur BDD.";
-        }
-    }
-}
-
-// AFFICHAGE (Reste identique à avant pour la partie admin)
-$view = $_GET['view'] ?? 'pending'; 
-$filter_motif = $_GET['motif'] ?? 'all'; 
-$sql = "SELECT * FROM contact_messages WHERE statut = " . ($view === 'history' ? "'Traité'" : "'En attente'");
-$params = [];
-if ($filter_motif !== 'all') {
-    if ($filter_motif === 'Autre') { $sql .= " AND motif LIKE 'Autre :%'"; } 
-    else { $sql .= " AND motif = ?"; $params[] = $filter_motif; }
-}
-$sql .= " ORDER BY created_at DESC";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$motifs_list = ["Renseignement séjour", "Inscription / Réservation", "Compte / Connexion", "Partenariat / Organisateur", "Recrutement / Animation", "Autre"];
 ?>
 
-<div class="bg-gray-100 min-h-screen py-8">
-    <div class="container mx-auto px-4 max-w-6xl">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-gray-800">Gestion des Messages</h1>
-            <div class="flex gap-2">
-                <a href="?view=pending&motif=<?php echo urlencode($filter_motif); ?>" class="px-4 py-2 rounded-lg font-bold transition <?php echo $view === 'pending' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50'; ?>">À traiter</a>
-                <a href="?view=history&motif=<?php echo urlencode($filter_motif); ?>" class="px-4 py-2 rounded-lg font-bold transition <?php echo $view === 'history' ? 'bg-green-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50'; ?>">Historique</a>
+<title>Tableau de bord Administrateur</title>
+
+<div class="min-h-screen bg-gray-50 py-10 font-sans">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-extrabold text-[#0A112F] mb-8">Tableau de bord Administrateur</h1>
+        
+        <?php if ($error): ?>
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded shadow-sm">
+                <p class="font-bold">Attention</p>
+                <p><?= $error ?></p>
             </div>
-        </div>
+        <?php endif; ?>
 
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex items-center gap-4">
-            <span class="text-gray-500 font-bold text-sm">Filtrer :</span>
-            <form action="" method="GET" class="flex-grow">
-                <input type="hidden" name="view" value="<?php echo htmlspecialchars($view); ?>">
-                <select name="motif" onchange="this.form.submit()" class="w-full md:w-auto bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-lg p-2.5">
-                    <option value="all" <?php echo $filter_motif === 'all' ? 'selected' : ''; ?>>Tous</option>
-                    <?php foreach ($motifs_list as $m): ?>
-                        <option value="<?php echo $m; ?>" <?php echo $filter_motif === $m ? 'selected' : ''; ?>><?php echo $m; ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
-        </div>
-
-        <?php if (isset($success)) echo "<div class='bg-green-100 text-green-700 p-4 rounded mb-4 border-l-4 border-green-500'>$success</div>"; ?>
-        <?php if (isset($error)) echo "<div class='bg-red-100 text-red-700 p-4 rounded mb-4 border-l-4 border-red-500'>$error</div>"; ?>
-
-        <div class="space-y-4">
-            <?php foreach ($messages as $msg): ?>
-                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 <?php echo $view === 'pending' ? 'border-orange-500' : 'border-green-500'; ?>">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-lg"><?php echo htmlspecialchars($msg['prenom'] . ' ' . $msg['nom']); ?></h3>
-                        <span class="bg-purple-50 text-purple-700 border border-purple-100 px-3 py-1 rounded-lg text-sm font-bold"><?php echo htmlspecialchars($msg['motif']); ?></span>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg mb-4 text-gray-700 italic">"<?php echo nl2br(htmlspecialchars($msg['message'])); ?>"</div>
-
-                    <?php if ($view === 'pending'): ?>
-                        <form method="POST" class="mt-4 bg-blue-50 p-4 rounded-lg">
-                            <input type="hidden" name="reply_id" value="<?php echo $msg['id']; ?>">
-                            <label class="block text-sm font-bold text-blue-900 mb-2">Réponse (Email de notif envoyé uniquement) :</label>
-                            <textarea name="reponse" class="rich-editor w-full border border-blue-200 rounded-lg p-3 mb-3"></textarea>
-                            <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Envoyer et Archiver</button>
-                        </form>
-                    <?php else: ?>
-                        <div class="border-t pt-4 mt-4">
-                            <div class="text-gray-800 bg-white border border-green-100 p-3 rounded-lg shadow-sm"><?php echo $msg['reponse']; ?></div>
-                        </div>
-                    <?php endif; ?>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <a href="admin_requests" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-900">Demandes Directeurs</h2>
+                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                 </div>
-            <?php endforeach; ?>
+                <p class="text-4xl font-extrabold text-[#0A112F] mt-4"><?= $countDirectors ?></p>
+                <p class="text-gray-500 mt-1">Demandes d'accès à valider</p>
+            </a>
+
+            <a href="admin_camp_requests" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-900">Validation des Camps</h2>
+                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <p class="text-4xl font-extrabold text-[#0A112F] mt-4"><?= $countCamps ?></p>
+                <p class="text-gray-500 mt-1">Camps en attente de modération</p>
+            </a>
+            
+            <a href="admin_demande_virement" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-gray-900">Demandes de Virement</h2>
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </div>
+                <p class="text-4xl font-extrabold text-[#0A112F] mt-4"><?= $countVirements ?></p>
+                <p class="text-gray-500 mt-1">Demandes de virement à traiter</p>
+            </a>
+            
+            <div class="lg:col-span-3">
+                <h2 class="text-2xl font-bold text-[#0A112F] mt-10 mb-4 border-b pb-2">Historique et Rapports</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <a href="admin_history_accepted" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-700">Camps Publiés (Historique)</h3>
+                        <p class="text-sm text-gray-500 mt-1">Voir tous les camps qui ont été acceptés.</p>
+                    </a>
+                    <a href="admin_history_refused" class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition duration-300 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-700">Camps Refusés (Historique)</h3>
+                        <p class="text-sm text-gray-500 mt-1">Voir tous les camps qui ont été refusés.</p>
+                    </a>
+                </div>
+            </div>
+            
         </div>
     </div>
 </div>
+
 <?php require_once 'partials/footer.php'; ?>

@@ -103,3 +103,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
+
+<?php require_once 'partials/footer.php'; ?>

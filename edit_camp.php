@@ -8,7 +8,7 @@ if (!isset($_SESSION['user']['id']) || !$_SESSION['user']['is_directeur']) {
     exit;
 }
 
-// 2. RÉCUPÉRATION DU TOKEN (et non plus de l'ID)
+// 2. RÉCUPÉRATION DU TOKEN
 $token = $_GET['t'] ?? '';
 if (empty($token)) {
     header('Location: mes_camps.php');
@@ -89,7 +89,8 @@ include 'partials/header.php';
                     
                     <div>
                         <label class="<?= $labelClass ?>">Thème / Activités</label>
-                        <input type="text" name="activites" value="<?= htmlspecialchars($camp['description']) ?>" class="<?= $inputClass ?>"> </div>
+                        <input type="text" name="activites" value="<?= htmlspecialchars($camp['description']) ?>" class="<?= $inputClass ?>"> 
+                    </div>
                     
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -253,7 +254,14 @@ include 'partials/header.php';
             </div>
 
             <div class="pt-6 border-t border-gray-200">
-                <h2 class="text-xl font-bold mb-4 text-blue-700">Image</h2>
+                <h2 class="text-xl font-bold mb-4 text-blue-700">Médias</h2>
+                
+                <div class="mb-6">
+                    <label class="<?= $labelClass ?>">Lien Vidéo YouTube (Teaser)</label>
+                    <input type="url" name="video_url" value="<?= htmlspecialchars($camp['video_url'] ?? '') ?>" placeholder="https://www.youtube.com/watch?v=..." class="<?= $inputClass ?>">
+                    <p class="text-xs text-gray-500 mt-1">Copiez l'URL complète de la vidéo.</p>
+                </div>
+
                 <div class="flex items-center gap-4">
                     <img src="<?= $camp['image_url'] ?>" class="w-32 h-20 object-cover rounded border">
                     <div class="flex-grow">
@@ -309,8 +317,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     orgaSelect.addEventListener('change', function() {
         loadTarifsOptions(this.value);
-        // Attention: Changer d'orga ne supprime pas les tarifs déjà sélectionnés visuellement, mais ça peut créer des incohérences.
-        // Pour faire simple ici, on garde la sélection.
     });
 
     function loadTarifsOptions(orgaId) {
@@ -340,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(!select.value) return;
         
         const opt = select.options[select.selectedIndex];
-        const newId = parseInt(select.value); // Ensure integer comparison
+        const newId = parseInt(select.value);
 
         // Vérif doublon
         if(selectedTarifs.some(t => parseInt(t.id) === newId)) return alert("Déjà ajouté");
@@ -356,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fonction globale pour le onclick
     window.removeTarif = function(id) {
-        selectedTarifs = selectedTarifs.filter(t => parseInt(t.id) !== parseInt(id)); // ParseInt pour sécurité
+        selectedTarifs = selectedTarifs.filter(t => parseInt(t.id) !== parseInt(id));
         renderSelectedTarifs();
     }
 

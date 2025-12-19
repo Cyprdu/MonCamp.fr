@@ -1,21 +1,54 @@
+<?php include 'partials/header.php'; ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Page 404</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur 404 - Page non trouvée</title>
     <style>
-        html, body {
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
             margin: 0;
-            height: 100%;
+            padding: 50px;
         }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.2rem;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 30px;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            text-decoration: none;
+            color: #fff;
+            background-color: #001f3f; /* bleu marine */
+            border-radius: 50px;       /* bords très arrondis */
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        a:hover {
+            background-color: #003366;
+            transform: scale(1.05);
         }
     </style>
 </head>
 <body>
-    <iframe src="404.php"></iframe>
+    <h1>Erreur 404</h1>
+    <p>La page que vous cherchez n'existe pas.</p>
+    <img src="/uploads/error404.gif" alt="Erreur 404">
+    <br>
+    <a href="/">Retour à l'accueil</a>
 </body>
 </html>

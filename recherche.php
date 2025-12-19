@@ -39,7 +39,6 @@ $is_logged_in = isset($_SESSION['user']);
                                 <button type="button" id="btn-geo" class="w-full py-2 px-3 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 border border-blue-100">
                                     <i class="fa-solid fa-location-crosshairs"></i> Autour de moi
                                 </button>
-                                
                                 <div id="radius-container" class="hidden pt-2">
                                     <div class="flex justify-between text-xs font-semibold text-gray-500 mb-1">
                                         <span>Rayon</span>
@@ -67,7 +66,7 @@ $is_logged_in = isset($_SESSION['user']);
                             <?php if ($is_logged_in): ?>
                                 <select id="filter-child" name="age" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                     <option value="">-- Sélectionner un enfant --</option>
-                                    </select>
+                                </select>
                             <?php else: ?>
                                 <input type="number" name="age" placeholder="Ex: 12" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                             <?php endif; ?>
@@ -114,11 +113,13 @@ $is_logged_in = isset($_SESSION['user']);
                     </div>
                 </div>
 
-                <div id="no-results-msg" class="hidden mb-6 p-4 bg-yellow-50 border border-yellow-100 rounded-lg text-yellow-800 text-sm flex items-center gap-3">
-                    <i class="fa-solid fa-circle-info text-yellow-600 text-lg"></i>
-                    <div>
-                        <strong>Aucun camp trouvé pour vos critères.</strong>
-                        <br>Découvrez nos suggestions sponsorisées ci-dessous.
+                <div id="fallback-msg" class="hidden mb-6 p-4 bg-orange-50 border-l-4 border-orange-500 text-orange-800 rounded-r-lg shadow-sm">
+                    <div class="flex items-start">
+                        <i class="fa-solid fa-triangle-exclamation mt-1 mr-3 text-lg"></i>
+                        <div>
+                            <strong class="block font-bold">Aucun camp ne correspond exactement à vos critères.</strong>
+                            <p class="text-sm mt-1">Cependant, voici notre sélection de séjours recommandés qui pourraient vous plaire :</p>
+                        </div>
                     </div>
                 </div>
 
@@ -144,58 +145,29 @@ $is_logged_in = isset($_SESSION['user']);
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    
     // --- VARIABLES ---
     const form = document.getElementById('search-form');
     const container = document.getElementById('results-container');
     const loader = document.getElementById('loader');
-    const noResultsMsg = document.getElementById('no-results-msg');
+    const fallbackMsg = document.getElementById('fallback-msg');
     const resultsCount = document.getElementById('results-count');
     const searchBtn = document.getElementById('trigger-search-btn');
     const sortSelect = document.getElementById('sort-order');
     const isLoggedIn = <?php echo json_encode($is_logged_in); ?>;
 
-    // --- FONCTION PUB (ADSENSE) ---
-    function getAdHtml() {
-        return `
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full justify-center items-center p-4 fade-in-anim min-h-[300px]">
-                <span class="text-[10px] text-gray-400 uppercase tracking-widest mb-2">Publicité</span>
-                <div class="w-full h-full flex items-center justify-center">
-                    <ins class="adsbygoogle" style="display:block; width:100%;" data-ad-format="rectangle" data-ad-layout="in-article" data-ad-client="ca-pub-3659884670016121" data-ad-slot="7108236695"></ins>
-                </div>
-            </div>`;
-    }
-
-    function triggerAds() {
-        try { 
-            const ads = document.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status])');
-            ads.forEach(() => {
-                (window.adsbygoogle = window.adsbygoogle || []).push({});
-            });
-        } catch (e) { console.log("AdBlock actif"); }
-    }
-
-    // --- SAUVEGARDE HISTORIQUE ---
-    function saveToHistory(term, count) {
-        if (!term || term.trim() === '') return;
-        let history = JSON.parse(localStorage.getItem('colomap_search_history') || '[]');
-        history = history.filter(item => item.term.toLowerCase() !== term.toLowerCase());
-        history.unshift({ term: term, count: count });
-        if (history.length > 3) history = history.slice(0, 3);
-        localStorage.setItem('colomap_search_history', JSON.stringify(history));
-    }
-
-    // --- UI HELPERS ---
+    // --- INTERFACE (Sliders, Geo...) ---
     const priceRange = document.getElementById('filter-price');
     if(priceRange) priceRange.addEventListener('input', function() { document.getElementById('price-display').textContent = this.value + ' €'; });
+    
     const radiusRange = document.getElementById('radius-range');
     if(radiusRange) radiusRange.addEventListener('input', function() { document.getElementById('radius-value').textContent = this.value + 'km'; });
 
-    // --- GEO ---
     const btnGeo = document.getElementById('btn-geo');
     if(btnGeo) {
         btnGeo.addEventListener('click', () => {
             if (!navigator.geolocation) return alert("Non supporté");
-            btnGeo.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Localisation...';
+            btnGeo.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>...';
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     document.getElementById('user-lat').value = pos.coords.latitude;
@@ -205,12 +177,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     btnGeo.classList.replace('bg-blue-50', 'bg-green-50');
                     document.getElementById('filter-city').value = "Ma position actuelle";
                 },
-                (err) => { console.error(err); btnGeo.innerHTML = 'Erreur'; }, { timeout: 8000 }
+                (err) => { btnGeo.innerHTML = 'Erreur'; }
             );
         });
     }
 
-    // --- LOAD DATA ---
+    // --- CHARGEMENT DONNÉES (Thèmes, Enfants) ---
     fetch('api/get_themes.php').then(r=>r.json()).then(d=>{
         const l=document.getElementById('themes-list'); l.innerHTML='';
         d.forEach(t=>{ l.innerHTML+=`<div class="flex items-center gap-2 p-1 hover:bg-white rounded"><input type="checkbox" name="themes[]" value="${t.id}" id="t-${t.id}" class="w-4 h-4 cursor-pointer"><label for="t-${t.id}" class="text-sm flex-1 cursor-pointer select-none">${t.name}</label></div>`; });
@@ -223,133 +195,128 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- RECHERCHE ---
+    // --- FONCTION DE RECHERCHE ---
     async function performSearch() {
         loader.classList.remove('hidden');
         container.innerHTML = '';
-        noResultsMsg.classList.add('hidden');
+        fallbackMsg.classList.add('hidden');
         resultsCount.textContent = "Recherche en cours...";
 
         const formData = new FormData(form);
         const params = new URLSearchParams(formData);
         params.append('sort', sortSelect.value);
-        const currentSearchTerm = formData.get('name');
-
-        // GESTION DU TITRE DYNAMIQUE
-        const defaultTitle = document.getElementById('default-title');
-        const dynamicTitle = document.getElementById('dynamic-title');
-        const termSpan = document.getElementById('search-term-span');
-
-        if(currentSearchTerm && currentSearchTerm.trim() !== "") {
-            defaultTitle.classList.add('hidden');
-            dynamicTitle.classList.remove('hidden');
-            termSpan.textContent = currentSearchTerm;
+        
+        // Titre dynamique
+        const term = formData.get('name');
+        if(term && term.trim()) {
+            document.getElementById('default-title').classList.add('hidden');
+            document.getElementById('dynamic-title').classList.remove('hidden');
+            document.getElementById('search-term-span').textContent = term;
         } else {
-            defaultTitle.classList.remove('hidden');
-            dynamicTitle.classList.add('hidden');
+            document.getElementById('default-title').classList.remove('hidden');
+            document.getElementById('dynamic-title').classList.add('hidden');
         }
 
         try {
             const res = await fetch(`api/get_camps_recherche.php?${params.toString()}`);
-            const camps = await res.json();
             
+            // CORRECTION ICI : On lit le corps JSON même si status != 200
+            let responseData;
+            try {
+                responseData = await res.json();
+            } catch(e) {
+                throw new Error("Réponse serveur invalide (non-JSON).");
+            }
+
+            if (!res.ok || responseData.status === 'error') {
+                throw new Error(responseData.message || `Erreur HTTP ${res.status}`);
+            }
+
+            const camps = responseData.camps || [];
+            const isFallback = responseData.is_fallback || false;
+
             loader.classList.add('hidden');
-            resultsCount.textContent = `${camps.length} camp(s) trouvé(s)`;
-
-            // === SAUVEGARDE HISTORIQUE (Seulement si résultats > 0) ===
-            if(camps.length > 0 && currentSearchTerm && currentSearchTerm.length > 1) {
-                saveToHistory(currentSearchTerm, camps.length);
+            
+            if (isFallback) {
+                fallbackMsg.classList.remove('hidden');
+                resultsCount.textContent = "0 résultat exact - Suggestions affichées";
+            } else {
+                resultsCount.textContent = `${camps.length} résultat(s) trouvé(s)`;
             }
 
-            // === LOGIQUE AFFICHAGE & PUBS ===
-            const N = camps.length;
-
-            if (N === 0) {
-                noResultsMsg.classList.remove('hidden');
-                container.insertAdjacentHTML('beforeend', getAdHtml());
-                container.insertAdjacentHTML('beforeend', getAdHtml());
-            } 
-            else if (N === 1) {
-                container.insertAdjacentHTML('beforeend', getAdHtml());
-                container.insertAdjacentHTML('beforeend', buildCard(camps[0]));
-                container.insertAdjacentHTML('beforeend', getAdHtml());
-            }
-            else if (N === 2) {
-                container.insertAdjacentHTML('beforeend', buildCard(camps[0]));
-                container.insertAdjacentHTML('beforeend', buildCard(camps[1]));
-                container.insertAdjacentHTML('beforeend', getAdHtml());
-            }
-            else if (N === 3) {
-                container.insertAdjacentHTML('beforeend', buildCard(camps[0]));
-                container.insertAdjacentHTML('beforeend', buildCard(camps[1]));
-                container.insertAdjacentHTML('beforeend', getAdHtml());
-                container.insertAdjacentHTML('beforeend', buildCard(camps[2]));
-            }
-            else if (N === 4) {
-                camps.forEach(c => container.insertAdjacentHTML('beforeend', buildCard(c)));
-                container.insertAdjacentHTML('beforeend', getAdHtml());
-            }
-            else {
-                let itemsSinceAd = 0;
-                camps.forEach((camp, index) => {
+            if (camps.length === 0 && !isFallback) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-500 py-10 text-lg">Aucun séjour disponible pour le moment.<br><small>Essayez de modifier vos filtres.</small></div>';
+            } else {
+                camps.forEach(camp => {
                     container.insertAdjacentHTML('beforeend', buildCard(camp));
-                    if (index === 2 || (index > 2 && (index - 2) % 8 === 0)) {
-                        container.insertAdjacentHTML('beforeend', getAdHtml());
-                    }
                 });
             }
-
-            triggerAds();
 
         } catch (error) {
             console.error(error);
             loader.classList.add('hidden');
             resultsCount.textContent = "Erreur.";
+            container.innerHTML = `<div class="col-span-full p-6 bg-red-50 text-red-700 rounded-xl border border-red-200 text-center">
+                <i class="fa-solid fa-bug text-2xl mb-2"></i><br>
+                <strong>Oups ! Une erreur est survenue.</strong><br>
+                ${error.message}
+            </div>`;
         }
     }
 
     function buildCard(camp) {
-        const img = camp.image_url || 'https://placehold.co/600x400/f1f5f9/94a3b8?text=Image';
-        const date = new Date(camp.date_debut).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'});
-        const typeBadge = camp.type_name ? `<span class="bg-blue-600 text-white text-xs px-2 py-1 rounded shadow ml-1">${camp.type_name}</span>` : '';
-        const distBadge = camp.distance ? `<span class="bg-green-600 text-white text-xs px-2 py-1 rounded shadow ml-1">${parseFloat(camp.distance).toFixed(1)} km</span>` : '';
+        const img = camp.image_url || 'assets/img/default-camp.jpg';
+        const prix = parseFloat(camp.prix).toFixed(0);
+        
+        let dateStr = "Dates à confirmer";
+        if(camp.date_debut) {
+            const d = new Date(camp.date_debut);
+            dateStr = d.toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'});
+        }
 
+        // Badges
+        let badgesHtml = '';
+        if (camp.is_vedette) badgesHtml += `<span class="bg-yellow-400 text-white text-xs px-2 py-1 rounded shadow-sm font-bold flex items-center mr-1"><i class="fa-solid fa-star mr-1"></i> TOP</span>`;
+        if (camp.is_urgence) badgesHtml += `<span class="bg-red-500 text-white text-xs px-2 py-1 rounded shadow-sm font-bold animate-pulse mr-1">Dernières places</span>`;
+        
         return `
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full fade-in-anim">
-            <div class="relative h-48 overflow-hidden bg-gray-100">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all group flex flex-col h-full fade-in-anim relative">
+            <a href="camp_details.php?t=${camp.token}" class="block relative h-48 overflow-hidden bg-gray-100">
                 <img src="${img}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" loading="lazy">
                 <div class="absolute top-3 left-3 flex flex-wrap gap-1">
+                    ${badgesHtml}
                     <span class="bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-gray-700 shadow">${camp.age_min}-${camp.age_max} ans</span>
-                    ${typeBadge}${distBadge}
                 </div>
-            </div>
+            </a>
             <div class="p-5 flex flex-col flex-grow">
-                <h3 class="font-bold text-gray-900 text-lg mb-1 line-clamp-1">${camp.nom}</h3>
+                <h3 class="font-bold text-gray-900 text-lg mb-1 line-clamp-1">
+                    <a href="camp_details.php?t=${camp.token}" class="hover:text-blue-600 transition">${camp.nom}</a>
+                </h3>
                 <p class="text-sm text-gray-500 mb-3 flex items-center"><i class="fa-solid fa-location-dot mr-2"></i> ${camp.ville}</p>
+                
                 <div class="mt-auto flex justify-between items-center pt-4 border-t border-gray-50">
-                    <span class="text-xl font-bold text-blue-600">${parseFloat(camp.prix).toFixed(0)}€</span>
-                    <a href="camp_details.php?t=${camp.token}" class="text-sm font-medium bg-gray-100 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg transition-colors">Voir l'offre</a>
+                    <div>
+                        <span class="text-xl font-bold text-blue-600">${prix}€</span>
+                        <span class="text-xs text-gray-400 block">${dateStr}</span>
+                    </div>
+                    <a href="camp_details.php?t=${camp.token}" class="text-sm font-medium bg-gray-100 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg transition-colors">Voir</a>
                 </div>
             </div>
         </div>`;
     }
 
     searchBtn.addEventListener('click', performSearch);
-    sortSelect.addEventListener('change', () => { if(container.children.length > 0) performSearch(); });
+    sortSelect.addEventListener('change', performSearch);
     
     document.getElementById('reset-filters').addEventListener('click', () => {
         form.reset();
         document.getElementById('price-display').textContent = '3000 €';
-        document.getElementById('radius-container').classList.add('hidden');
-        document.getElementById('filter-city').value = '';
-        document.getElementById('default-title').classList.remove('hidden');
-        document.getElementById('dynamic-title').classList.add('hidden');
-        container.innerHTML = '';
-        noResultsMsg.classList.add('hidden');
-        resultsCount.textContent = "Filtres réinitialisés.";
+        if(document.getElementById('radius-container')) document.getElementById('radius-container').classList.add('hidden');
+        if(document.getElementById('filter-city')) document.getElementById('filter-city').value = '';
+        performSearch();
     });
 
-    // Mobile Drawer
+    // Mobile Drawer Logic
     const mobileBtn = document.getElementById('mobile-filter-btn');
     const drawer = document.getElementById('mobile-filter-drawer');
     const overlay = document.getElementById('mobile-filter-overlay');
@@ -378,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if(closeBtn) closeBtn.addEventListener('click', () => toggleDrawer(false));
     if(overlay) overlay.addEventListener('click', () => toggleDrawer(false));
 
+    // Lancer la recherche au chargement
     performSearch();
 });
 </script>

@@ -32,7 +32,7 @@ $themesList = [
     "Journalisme","Jeux de société","Jeux vidéo","Jazz","Lecture","Légendes","Magie","Manga","Médecitation","Montagne",
     "Musique","Natation","Nature","Océan","Photographie","Photographie nature","Photographie urbaine","Pirate","Planète",
     "Pâtisserie","Prière","Radio","Radio-théâtre","Rap","Randonnée","Recyclage","Relaxation","Robotique","Rock","Scotisme",
-    "Science","Science-fiction","Ski","Sorcelererie","Sport", "Storytelling","Survie","Survivalisme","Théâtre","Théâtre musical",
+    "Science","Science-fiction","Ski", "Sorcelererie","Sport", "Storytelling","Survie","Survivalisme","Théâtre","Théâtre musical",
     "Voyage","Voyage solidaire","Yoga","Zombies","Autre"
 ];
 sort($themesList);
