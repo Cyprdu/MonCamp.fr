@@ -195,6 +195,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // --- GESTION HISTORIQUE ---
+    function updateHistoryWithCount(term, count) {
+        if(!term || term.trim() === '') return;
+        const key = 'colomap_search_history';
+        let history = [];
+        try { history = JSON.parse(localStorage.getItem(key)) || []; } catch(e){}
+
+        if (count > 0) {
+            // Mise à jour du nombre de résultats pour ce terme
+            const idx = history.findIndex(i => i.term.toLowerCase() === term.toLowerCase());
+            if(idx !== -1) {
+                history[idx].count = count;
+            } else {
+                // Si pas trouvé (accès direct sans header submit), on ajoute
+                history.unshift({ term: term, count: count, date: Date.now() });
+                if(history.length > 6) history = history.slice(0, 6);
+            }
+            localStorage.setItem(key, JSON.stringify(history));
+        } else {
+            // Si 0 résultat, on retire l'entrée de l'historique (comme demandé)
+            // Le header l'a peut-être ajouté au submit, donc on le nettoie ici
+            history = history.filter(i => i.term.toLowerCase() !== term.toLowerCase());
+            localStorage.setItem(key, JSON.stringify(history));
+        }
+    }
+
     // --- FONCTION DE RECHERCHE ---
     async function performSearch() {
         loader.classList.remove('hidden');
@@ -220,13 +246,8 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const res = await fetch(`api/get_camps_recherche.php?${params.toString()}`);
             
-            // CORRECTION ICI : On lit le corps JSON même si status != 200
             let responseData;
-            try {
-                responseData = await res.json();
-            } catch(e) {
-                throw new Error("Réponse serveur invalide (non-JSON).");
-            }
+            try { responseData = await res.json(); } catch(e) { throw new Error("Réponse serveur invalide."); }
 
             if (!res.ok || responseData.status === 'error') {
                 throw new Error(responseData.message || `Erreur HTTP ${res.status}`);
@@ -237,6 +258,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             loader.classList.add('hidden');
             
+            // --- MISE A JOUR HISTORIQUE ---
+            if(term && term.trim()) {
+                // Si fallback activé = 0 résultat exact trouvé
+                const exactCount = isFallback ? 0 : camps.length;
+                updateHistoryWithCount(term.trim(), exactCount);
+            }
+
             if (isFallback) {
                 fallbackMsg.classList.remove('hidden');
                 resultsCount.textContent = "0 résultat exact - Suggestions affichées";

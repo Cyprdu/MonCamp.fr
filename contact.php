@@ -61,29 +61,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<div class="bg-gray-50 min-h-screen py-12">
-    <div class="container mx-auto px-4 max-w-3xl">
+<div class="bg-gray-50 min-h-screen py-12 font-sans">
+    <div class="container mx-auto px-4">
         
         <div class="text-center mb-10">
             <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Nous contacter</h1>
             <p class="text-gray-500">Une question, une suggestion ? Écrivez-nous.</p>
         </div>
 
-        <?php if ($msg_success): ?>
-            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-8 rounded-r shadow-sm flex items-center animate-pulse">
-                <i class="fa-solid fa-check-circle text-xl mr-3"></i>
-                <div><p class="font-bold">Message envoyé</p><p class="text-sm"><?php echo $msg_success; ?></p></div>
-            </div>
-        <?php endif; ?>
+        <div class="max-w-3xl mx-auto">
+            <?php if ($msg_success): ?>
+                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-8 rounded-r shadow-sm flex items-center animate-pulse">
+                    <i class="fa-solid fa-check-circle text-xl mr-3"></i>
+                    <div><p class="font-bold">Message envoyé</p><p class="text-sm"><?php echo $msg_success; ?></p></div>
+                </div>
+            <?php endif; ?>
 
-        <?php if ($msg_error): ?>
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-8 rounded-r shadow-sm flex items-center">
-                <i class="fa-solid fa-triangle-exclamation text-xl mr-3"></i>
-                <div><p class="font-bold">Erreur</p><p class="text-sm"><?php echo $msg_error; ?></p></div>
-            </div>
-        <?php endif; ?>
+            <?php if ($msg_error): ?>
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-8 rounded-r shadow-sm flex items-center">
+                    <i class="fa-solid fa-triangle-exclamation text-xl mr-3"></i>
+                    <div><p class="font-bold">Erreur</p><p class="text-sm"><?php echo $msg_error; ?></p></div>
+                </div>
+            <?php endif; ?>
+        </div>
 
-        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 relative overflow-hidden">
+        <div class="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-gray-100 relative overflow-hidden">
             <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-50 rounded-full opacity-50 blur-2xl"></div>
 
             <form action="" method="POST" class="space-y-6 relative z-10">
@@ -147,6 +149,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </form>
         </div>
+
+        <div class="w-full max-w-3xl mx-auto mt-8">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center overflow-hidden">
+                <span class="block text-[10px] text-gray-400 uppercase mb-2">Publicité</span>
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3659884670016121" crossorigin="anonymous"></script>
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-3659884670016121"
+                     data-ad-slot="1183215923"
+                     data-ad-format="horizontal"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
+            </div>
+        </div>
+
+        <div class="mt-16 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">Questions Fréquentes</h2>
+                <p class="text-gray-500 mt-2">Trouvez rapidement une réponse à vos interrogations</p>
+            </div>
+
+            <div class="space-y-4">
+                <details class="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition select-none">
+                        <span><i class="fa-solid fa-lock text-blue-500 mr-2"></i> J'ai oublié mon mot de passe, que faire ?</span>
+                        <span class="transition group-open:rotate-180"><i class="fa-solid fa-chevron-down text-gray-400"></i></span>
+                    </summary>
+                    <div class="p-5 pt-0 text-gray-600 border-t border-gray-100 bg-gray-50/50 leading-relaxed">
+                        Pas de panique ! Vous pouvez réinitialiser votre mot de passe à tout moment en cliquant sur le lien 
+                        <a href="forgot_password.php" class="text-blue-600 font-bold hover:underline">Mot de passe oublié</a> sur la page de connexion. 
+                        Un email vous sera envoyé avec les instructions pour en créer un nouveau.
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition select-none">
+                        <span><i class="fa-solid fa-circle-exclamation text-red-500 mr-2"></i> Je n'arrive pas à me connecter</span>
+                        <span class="transition group-open:rotate-180"><i class="fa-solid fa-chevron-down text-gray-400"></i></span>
+                    </summary>
+                    <div class="p-5 pt-0 text-gray-600 border-t border-gray-100 bg-gray-50/50 leading-relaxed">
+                        Vérifiez bien que vous utilisez l'adresse email fournie lors de votre inscription. Assurez-vous également que la touche "Majuscule" n'est pas activée par erreur.
+                        Si le problème persiste, essayez de réinitialiser votre mot de passe ou contactez-nous via le formulaire ci-dessus.
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition select-none">
+                        <span><i class="fa-solid fa-child text-green-500 mr-2"></i> Comment inscrire mon enfant à un séjour ?</span>
+                        <span class="transition group-open:rotate-180"><i class="fa-solid fa-chevron-down text-gray-400"></i></span>
+                    </summary>
+                    <div class="p-5 pt-0 text-gray-600 border-t border-gray-100 bg-gray-50/50 leading-relaxed">
+                        C'est très simple :
+                        <ol class="list-decimal list-inside mt-2 space-y-1 ml-2">
+                            <li>Connectez-vous à votre compte.</li>
+                            <li>Allez dans "Gérer mes enfants" pour créer une fiche enfant.</li>
+                            <li>Parcourez les séjours, choisissez celui qui vous plaît et cliquez sur "Réserver".</li>
+                            <li>Suivez les étapes pour finaliser l'inscription.</li>
+                        </ol>
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition select-none">
+                        <span><i class="fa-solid fa-user-tie text-purple-500 mr-2"></i> Je suis un organisateur, comment proposer mes séjours ?</span>
+                        <span class="transition group-open:rotate-180"><i class="fa-solid fa-chevron-down text-gray-400"></i></span>
+                    </summary>
+                    <div class="p-5 pt-0 text-gray-600 border-t border-gray-100 bg-gray-50/50 leading-relaxed">
+                        ColoMap est ouvert aux organisateurs professionnels. Vous devez créer un compte "Directeur" ou faire une demande pour le devenir. 
+                        Rendez-vous dans la section <a href="organisateurs.php" class="text-purple-600 font-bold hover:underline">Espace Organisateur</a> pour en savoir plus et commencer vos démarches.
+                    </div>
+                </details>
+
+                <details class="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition select-none">
+                        <span><i class="fa-solid fa-credit-card text-gray-500 mr-2"></i> Le paiement est-il sécurisé ?</span>
+                        <span class="transition group-open:rotate-180"><i class="fa-solid fa-chevron-down text-gray-400"></i></span>
+                    </summary>
+                    <div class="p-5 pt-0 text-gray-600 border-t border-gray-100 bg-gray-50/50 leading-relaxed">
+                        Oui, absolument. Nous utilisons <strong>Stripe</strong>, une plateforme de paiement mondialement reconnue, pour sécuriser toutes les transactions effectuées sur notre site. Vos coordonnées bancaires ne sont jamais stockées sur nos serveurs.
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <div class="w-full max-w-3xl mx-auto mt-8">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center overflow-hidden">
+                <span class="block text-[10px] text-gray-400 uppercase mb-2">Publicité</span>
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3659884670016121" crossorigin="anonymous"></script>
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-3659884670016121"
+                     data-ad-slot="1183215923"
+                     data-ad-format="horizontal"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
+            </div>
+        </div>
+
     </div>
 </div>
 

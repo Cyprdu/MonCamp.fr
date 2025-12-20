@@ -47,6 +47,11 @@ $placeholder_url_mobile = "https://placehold.co/48x48/e2e8f0/2563eb?text=" . url
         .dropdown-menu { display: none; }
         .group:hover .dropdown-menu { display: block; animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Scrollbar fine pour l'historique */
+        #history-list::-webkit-scrollbar { width: 4px; }
+        #history-list::-webkit-scrollbar-track { background: #f1f1f1; }
+        #history-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
     <link rel="manifest" href="/manifest.json">
 
@@ -79,15 +84,23 @@ if ('serviceWorker' in navigator) {
                     <a href="<?php echo clean_url('../'); ?>" class="text-2xl font-bold block whitespace-nowrap"><span class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">ColoMap</span></a>
                 </div>
 
-                <div id="search-wrapper" class="hidden md:block flex-1 max-w-md transition-all duration-500 ease-in-out mx-auto px-4">
-                    <form action="recherche" method="GET" class="relative group h-full flex items-center">
+                <div id="search-wrapper" class="hidden md:block flex-1 max-w-md transition-all duration-500 ease-in-out mx-auto px-4 relative">
+                    <form id="desktop-search-form" action="recherche" method="GET" class="relative group h-full flex items-center">
                         <input type="text" id="desktop-search-input" name="name" placeholder="Rechercher une colo..." autocomplete="off"
                                class="w-full bg-gray-100 border border-transparent focus:border-blue-300 rounded-full py-2 pl-4 pr-10 focus:ring-4 focus:ring-blue-100 focus:bg-white transition-all duration-300 text-sm shadow-sm relative z-20">
                         <button type="submit" class="absolute right-0 top-1/2 transform -translate-y-1/2 mr-3 text-gray-400 hover:text-blue-600 transition-colors z-20">
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </button>
-                        <div id="history-dropdown" class="absolute top-12 left-0 w-full bg-white shadow-xl rounded-2xl border border-gray-100 hidden overflow-hidden z-10 animate-fade-in-down"></div>
                     </form>
+                    
+                    <div id="history-dropdown" class="hidden absolute top-12 left-0 w-full bg-white shadow-xl rounded-2xl border border-gray-100 z-10 overflow-hidden animate-fade-in-down mx-4" style="left: 0; right: 0; margin: auto;">
+                        <div class="px-4 py-2 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                            <span class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Recherches récentes</span>
+                            <button id="clear-all-history" class="text-[10px] text-red-400 hover:text-red-600 font-medium hover:underline">Tout effacer</button>
+                        </div>
+                        <div id="history-list" class="max-h-64 overflow-y-auto">
+                            </div>
+                    </div>
                 </div>
 
                 <div id="nav-links" class="hidden md:flex items-center space-x-2 flex-shrink-0 transition-all duration-500 ease-in-out overflow-hidden whitespace-nowrap opacity-100">
@@ -104,6 +117,10 @@ if ('serviceWorker' in navigator) {
                     <?php if ($is_logged_in && !$is_animateur): ?>
                         <a href="favorites" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Favoris</a>
                         <a href="reservations" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Réservations</a>
+                    <?php endif; ?>
+
+                    <?php if (!$is_admin): ?>
+                        <a href="contact" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Contact</a>
                     <?php endif; ?>
 
                     <a href="aide" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Aide</a>
@@ -212,7 +229,7 @@ if ('serviceWorker' in navigator) {
                 <button id="close-menu-button" class="p-2 rounded-md text-gray-400 hover:text-gray-600"><svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
 
-            <form action="recherche" method="GET" class="mb-6 relative">
+            <form id="mobile-search-form" action="recherche" method="GET" class="mb-6 relative">
                 <input type="text" id="mobile-search-input" name="name" placeholder="Rechercher..." autocomplete="off"
                        class="w-full bg-gray-100 border border-gray-200 rounded-lg py-3 pl-4 pr-10 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
                 <button type="submit" class="absolute right-0 top-0 mt-3 mr-4 text-gray-400">
@@ -256,6 +273,10 @@ if ('serviceWorker' in navigator) {
                     <a href="messagerie" class="relative text-gray-700 hover:bg-gray-100 block px-3 py-3 rounded-md text-base font-medium"><span>Messagerie</span><span id="unread-badge-mobile" class="absolute top-3 left-32 w-5 h-5 flex items-center justify-center bg-red-600 text-white text-xs font-bold rounded-full hidden"></span></a>
                 <?php endif; ?>
                 
+                <?php if (!$is_admin): ?>
+                    <a href="contact" class="text-gray-700 hover:bg-gray-100 block px-3 py-3 rounded-md text-base font-medium">Contact</a>
+                <?php endif; ?>
+
                 <a href="aide" class="text-gray-700 hover:bg-gray-100 block px-3 py-3 rounded-md text-base font-medium">Aide</a>
                 
                 <hr class="my-4 border-gray-200">
@@ -271,51 +292,169 @@ if ('serviceWorker' in navigator) {
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const desktopSearchInput = document.getElementById('desktop-search-input');
+        // --- GESTION DE LA RECHERCHE ET HISTORIQUE ---
+        const desktopInput = document.getElementById('desktop-search-input');
+        const desktopForm = document.getElementById('desktop-search-form');
+        const mobileInput = document.getElementById('mobile-search-input');
+        const mobileForm = document.getElementById('mobile-search-form');
+        
+        const historyDropdown = document.getElementById('history-dropdown');
+        const historyList = document.getElementById('history-list');
+        const clearHistoryBtn = document.getElementById('clear-all-history');
+        
         const navLinks = document.getElementById('nav-links');
         const searchWrapper = document.getElementById('search-wrapper');
-        const historyDropdown = document.getElementById('history-dropdown');
 
+        // Clé localStorage
+        const STORAGE_KEY = 'colomap_search_history';
+
+        // Fonction pour récupérer l'historique
+        function getHistory() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            } catch { return []; }
+        }
+
+        // Fonction pour sauvegarder
+        function saveSearch(term, count = null) {
+            if (!term || term.trim() === '') return;
+            term = term.trim();
+            
+            let history = getHistory();
+            // Supprimer l'existant s'il y est déjà pour le remonter en premier
+            history = history.filter(item => item.term.toLowerCase() !== term.toLowerCase());
+            
+            // Ajouter au début
+            history.unshift({ term: term, count: count, date: new Date().getTime() });
+            
+            // Garder max 6
+            if (history.length > 6) history = history.slice(0, 6);
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        }
+
+        // Fonction pour supprimer un item
+        function deleteHistoryItem(term, e) {
+            e.preventDefault();
+            e.stopPropagation(); // Empêcher le clic sur le lien
+            let history = getHistory();
+            history = history.filter(item => item.term !== term);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            renderHistory();
+            // Focus input pour ne pas fermer le dropdown
+            if(desktopInput) desktopInput.focus();
+        }
+
+        // Afficher l'historique
         function renderHistory() {
-            const history = JSON.parse(localStorage.getItem('colomap_search_history') || '[]');
+            const history = getHistory();
             if (history.length === 0) {
-                historyDropdown.innerHTML = '';
                 historyDropdown.classList.add('hidden');
                 return;
             }
-            let html = '<div class="p-2">';
-            html += '<div class="text-[10px] uppercase text-gray-400 font-bold px-3 py-1 mb-1">Récents</div>';
+
+            let html = '';
             history.forEach(item => {
                 html += `
-                <a href="recherche?name=${encodeURIComponent(item.term)}" class="flex items-center justify-between px-3 py-2 hover:bg-gray-50 rounded-lg group transition-colors">
-                    <div class="flex items-center overflow-hidden">
-                        <i class="fa-solid fa-clock-rotate-left text-gray-400 mr-3 text-sm group-hover:text-blue-500"></i>
-                        <span class="text-sm font-bold text-gray-800 truncate">${item.term}</span>
-                    </div>
-                    <span class="text-xs text-gray-400 ml-2 whitespace-nowrap bg-gray-100 px-2 py-0.5 rounded-full">${item.count} résultats</span>
-                </a>`;
+                <div class="relative group">
+                    <a href="recherche?name=${encodeURIComponent(item.term)}" class="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <i class="fa-solid fa-clock-rotate-left text-gray-300 group-hover:text-blue-500 transition-colors text-sm"></i>
+                            <span class="text-sm text-gray-700 font-medium truncate">${item.term}</span>
+                        </div>
+                        <button class="delete-history-btn w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-300 hover:text-red-500 transition-all z-20" data-term="${item.term.replace(/"/g, '&quot;')}">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </a>
+                </div>`;
             });
-            html += '</div>';
-            historyDropdown.innerHTML = html;
+            
+            historyList.innerHTML = html;
+            
+            // Attacher événements suppression
+            document.querySelectorAll('.delete-history-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteHistoryItem(btn.dataset.term, e));
+            });
+
             historyDropdown.classList.remove('hidden');
         }
 
-        if(desktopSearchInput) {
-            desktopSearchInput.addEventListener('focus', () => {
+        // Gestionnaires d'événements Input Desktop
+        if (desktopInput) {
+            desktopInput.addEventListener('focus', () => {
+                // Animation CSS header
                 if(navLinks) { navLinks.style.maxWidth = '0px'; navLinks.style.opacity = '0'; navLinks.style.padding = '0'; navLinks.style.margin = '0'; }
                 if(searchWrapper) { searchWrapper.classList.remove('max-w-md'); searchWrapper.classList.add('max-w-full', 'w-full'); }
+                
                 renderHistory();
             });
-            desktopSearchInput.addEventListener('blur', () => {
-                if(navLinks) { navLinks.style.maxWidth = '1000px'; navLinks.style.opacity = '1'; navLinks.style.padding = ''; navLinks.style.margin = ''; }
-                if(searchWrapper) { searchWrapper.classList.remove('max-w-full', 'w-full'); searchWrapper.classList.add('max-w-md'); }
-                setTimeout(() => { historyDropdown.classList.add('hidden'); }, 200);
+
+            desktopInput.addEventListener('input', () => {
+                if(desktopInput.value.length > 0) {
+                    historyDropdown.classList.add('hidden');
+                } else {
+                    renderHistory();
+                }
             });
-            desktopSearchInput.addEventListener('input', () => {
-               if(desktopSearchInput.value.length > 0) { historyDropdown.classList.add('hidden'); } else { renderHistory(); }
+
+            // Delay blur pour permettre le clic sur l'historique
+            desktopInput.addEventListener('blur', (e) => {
+                // Petit délai pour laisser le temps au clic de se faire
+                setTimeout(() => {
+                    historyDropdown.classList.add('hidden');
+                    // Reset CSS header si vide
+                    if(desktopInput.value === '') {
+                        if(navLinks) { navLinks.style.maxWidth = '1000px'; navLinks.style.opacity = '1'; navLinks.style.padding = ''; navLinks.style.margin = ''; }
+                        if(searchWrapper) { searchWrapper.classList.remove('max-w-full', 'w-full'); searchWrapper.classList.add('max-w-md'); }
+                    }
+                }, 200);
             });
         }
 
+        // Sauvegarde lors de la soumission (Desktop & Mobile)
+        [desktopForm, mobileForm].forEach(form => {
+            if(form) {
+                form.addEventListener('submit', function() {
+                    const input = this.querySelector('input[name="name"]');
+                    if(input && input.value.trim() !== "") {
+                        // On enregistre avec count null
+                        saveSearch(input.value);
+                    }
+                });
+            }
+        });
+
+        // Bouton tout effacer
+        if(clearHistoryBtn) {
+            clearHistoryBtn.addEventListener('mousedown', (e) => { // Mousedown déclenche avant blur
+                localStorage.removeItem(STORAGE_KEY);
+                renderHistory();
+            });
+        }
+
+        // Mise à jour du nombre de résultats si on est sur la page recherche
+        // Ce bout de code détecte si on est sur la page recherche et met à jour l'historique
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchedTerm = urlParams.get('name');
+        if (window.location.pathname.includes('recherche') && searchedTerm) {
+            // Essayons de trouver le nombre de résultats dans le DOM (dépend de votre page recherche.php)
+            setTimeout(() => {
+                // On cherche un élément qui contiendrait le nombre
+                const hasNoResults = document.body.innerText.includes('Aucun camp trouvé') || document.body.innerText.includes('Aucun résultat') || document.body.innerText.includes('Suggestions affichées');
+                const resultCount = hasNoResults ? 0 : (document.querySelectorAll('.camp-card').length || 1); 
+                
+                if (resultCount > 0) {
+                    saveSearch(searchedTerm, resultCount);
+                } else {
+                    // Si 0 résultat, on retire l'entrée de l'historique
+                    let history = getHistory();
+                    history = history.filter(item => item.term.toLowerCase() !== searchedTerm.toLowerCase());
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+                }
+            }, 1000); 
+        }
+
+        // --- MENU MOBILE ---
         const openMenuButton = document.getElementById('open-menu-button');
         const closeMenuButton = document.getElementById('close-menu-button');
         const mobileMenu = document.getElementById('mobile-menu');

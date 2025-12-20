@@ -76,7 +76,7 @@ $is_director = $_SESSION['user']['is_directeur'] ?? false;
         <?php endif; ?>
         
         <?php if ($is_admin): ?>
-        <a href="admin/default.php" class="relative bg-red-50 p-6 rounded-xl shadow-lg border border-red-200 hover:border-red-500 hover:ring-2 hover:ring-red-200 transition-all cursor-pointer md:col-span-2 lg:col-span-1">
+        <a href="admin" class="relative bg-red-50 p-6 rounded-xl shadow-lg border border-red-200 hover:border-red-500 hover:ring-2 hover:ring-red-200 transition-all cursor-pointer md:col-span-2 lg:col-span-1">
             <div class="flex items-center gap-4">
                 <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
                     <i class="fa-solid fa-gauge-high text-xl"></i>

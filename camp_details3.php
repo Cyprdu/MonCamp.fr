@@ -153,7 +153,7 @@ try {
                         </div>
                         
                         <div class="p-6">
-                            <div id="progress-container" class="hidden mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div class="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
                                 <div class="flex justify-between text-sm font-bold mb-2">
                                     <span class="text-gray-600">Remplissage</span>
                                     <span id="progress-text" class="text-[#0A112F]">...</span>
@@ -286,8 +286,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('video-wrapper').classList.remove('hidden');
         }
 
-        // CARTE
+        // CARTE UNIVERSELLE (OpenStreetMap via Nominatim)
         const locationQuery = encodeURIComponent(`${camp.ville} ${camp.code_postal}`);
+        const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=0,0,0,0&layer=mapnik&q=${locationQuery}`;
+        // Alternative plus simple : on utilise l'URL de recherche d'OSM
         document.getElementById('map-frame').src = `https://maps.google.com/maps?q=${locationQuery}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
 
         // SIDEBAR
@@ -295,19 +297,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('card-age').textContent = `${camp.age_min} - ${camp.age_max} ans`;
         document.getElementById('card-dates').textContent = dateStr;
 
-        // GESTION BARRE DE PROGRESSION (Uniquement si inscription_en_ligne = 1)
-        if (camp.inscription_en_ligne == 1) {
-            const progressContainer = document.getElementById('progress-container');
-            const pb = document.getElementById('progress-bar');
-            const pt = document.getElementById('progress-text');
-            const percentFilled = camp.percent_filled || 0;
+        // BARRE PROGRESSION
+        const percentFilled = camp.percent_filled || 0;
+        const pb = document.getElementById('progress-bar');
+        const pt = document.getElementById('progress-text');
+        setTimeout(() => { if(pb) pb.style.width = `${percentFilled}%`; }, 300);
+        if(pt) pt.textContent = `${percentFilled}% Rempli`;
 
-            progressContainer.classList.remove('hidden');
-            setTimeout(() => { if(pb) pb.style.width = `${percentFilled}%`; }, 300);
-            if(pt) pt.textContent = `${percentFilled}% Rempli`;
-        }
-
-        // GESTION DU BOUTON RESERVER
+        // GESTION DU BOUTON RESERVER (Lien Externe Prioritaire)
         const ctaBox = document.getElementById('cta-container');
         let ctaHtml = '';
         const places = camp.places_restantes || 0;
@@ -330,7 +327,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         Se connecter pour réserver
                     </a>`;
             }
-        } else if (camp.inscription_en_ligne == 1 && places === 0) {
+        } else if (places === 0) {
             ctaHtml = `<button disabled class="block w-full bg-gray-100 text-gray-400 font-bold py-3 px-6 rounded-xl cursor-not-allowed text-center border border-gray-200">Inscriptions closes</button>`;
         }
         ctaBox.innerHTML = ctaHtml;
@@ -363,100 +360,44 @@ document.addEventListener('DOMContentLoaded', async function() {
                 </a>`;
         }
 
-        // FAVORIS UI - GESTION DU CLIC ET DU HOVER (Fix UX)
+        // FAVORIS UI
         if(isLoggedIn) {
             const btnFav = document.getElementById('btn-favorite');
             let isFav = userFavorites.includes(camp.id);
-            const favIcon = btnFav.querySelector('svg');
-            
-            // Fonction pour mettre à jour l'apparence
-            // On gère manuellement les classes hover pour éviter le conflit
-            const renderFavState = (active) => {
-                if(active) {
-                    // Mode Favori : Rouge plein
-                    // On retire la classe hover blanche, et on met une hover rouge
-                    btnFav.classList.remove('bg-white/10', 'hover:bg-white/20');
-                    btnFav.classList.add('bg-red-500', 'hover:bg-red-600', 'border-red-400');
-                    favIcon.setAttribute('fill', 'currentColor'); // Coeur rempli
-                } else {
-                    // Mode Normal : Transparent blanc
-                    // On remet la classe hover blanche
-                    btnFav.classList.remove('bg-red-500', 'hover:bg-red-600', 'border-red-400');
-                    btnFav.classList.add('bg-white/10', 'hover:bg-white/20');
-                    favIcon.setAttribute('fill', 'none'); // Coeur vide
-                }
+            const updateFavUI = () => {
+                if(isFav) btnFav.classList.replace('bg-white/10', 'bg-red-500/80');
+                else btnFav.classList.replace('bg-red-500/80', 'bg-white/10');
             };
-            
-            // État initial
-            renderFavState(isFav);
+            updateFavUI();
 
-            btnFav.addEventListener('click', () => {
-                // 1. Changement visuel immédiat
-                const oldState = isFav;
-                isFav = !isFav;
-                renderFavState(isFav);
-
-                // 2. Appel API en arrière-plan
-                fetch('api/toggle_favorite.php', { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({campId: camp.id}) 
-                })
-                .then(res => {
-                    if(!res.ok) throw new Error();
-                })
-                .catch(err => {
-                    // 3. En cas d'erreur, on remet l'état précédent
-                    console.error("Erreur favoris", err);
-                    isFav = oldState;
-                    renderFavState(isFav);
-                });
+            btnFav.addEventListener('click', async () => {
+                try {
+                    await fetch('api/toggle_favorite.php', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({campId: camp.id}) });
+                    isFav = !isFav;
+                    updateFavUI();
+                } catch(e) {}
             });
         }
 
-        // CALENDRIER INTELLIGENT (Android vs iOS)
-        document.getElementById('btn-calendar').addEventListener('click', () => {
-            const uAgent = navigator.userAgent || navigator.vendor || window.opera;
-            const isIOS = /iPad|iPhone|iPod/.test(uAgent) && !window.MSStream;
-
-            const title = `Séjour ColoMap: ${camp.nom}`;
-            const details = `Séjour à ${camp.ville}. Plus d'infos: ${window.location.href}`;
-            const locationTxt = `${camp.adresse}, ${camp.ville}`;
-            
-            // Format dates
-            const startYMD = d1.toISOString().split('T')[0].replace(/-/g, '');
-            const endYMD = d2.toISOString().split('T')[0].replace(/-/g, '');
-            
-            if (isIOS) {
-                // Pour iOS : Génération d'un fichier .ics à télécharger
-                const icsContent = [
-                    'BEGIN:VCALENDAR',
-                    'VERSION:2.0',
-                    'PRODID:-//ColoMap//Sejour//FR',
-                    'BEGIN:VEVENT',
-                    `UID:${Date.now()}@colomap.fr`,
-                    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-                    `DTSTART;VALUE=DATE:${startYMD}`,
-                    `DTEND;VALUE=DATE:${endYMD}`,
-                    `SUMMARY:${title}`,
-                    `DESCRIPTION:${details}`,
-                    `LOCATION:${locationTxt}`,
-                    'END:VEVENT',
-                    'END:VCALENDAR'
-                ].join('\r\n');
-
-                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-                const link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.setAttribute('download', 'sejour_colomap.ics');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+        // PARTAGE
+        document.getElementById('btn-share').addEventListener('click', () => {
+            if(navigator.share) {
+                navigator.share({ title: `Camp ${camp.nom}`, text: `Regarde ce séjour à ${camp.ville} !`, url: window.location.href }).catch(console.error);
             } else {
-                // Pour Android / Desktop : Lien Google Calendar
-                const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startYMD}/${endYMD}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(locationTxt)}&sf=true&output=xml`;
-                window.open(gCalUrl, '_blank');
+                navigator.clipboard.writeText(window.location.href);
+                alert('Lien copié dans le presse-papier !');
             }
+        });
+
+        // CALENDRIER
+        document.getElementById('btn-calendar').addEventListener('click', () => {
+            const startStr = d1.toISOString().replace(/-|:|\.\d\d\d/g, "");
+            const endStr = d2.toISOString().replace(/-|:|\.\d\d\d/g, "");
+            const title = encodeURIComponent(`Séjour ColoMap: ${camp.nom}`);
+            const details = encodeURIComponent(`Séjour à ${camp.ville}. Plus d'infos: ${window.location.href}`);
+            const locationAddress = encodeURIComponent(`${camp.adresse}, ${camp.ville}`);
+            const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startStr}/${endStr}&details=${details}&location=${locationAddress}&sf=true&output=xml`;
+            window.open(gCalUrl, '_blank');
         });
 
         loader.classList.add('hidden');
