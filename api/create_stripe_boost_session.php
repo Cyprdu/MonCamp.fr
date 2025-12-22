@@ -1,88 +1,107 @@
 <?php
 // Fichier: api/create_stripe_boost_session.php
 require_once 'config.php';
-require_once '../vendor/autoload.php'; // Assurez-vous que l'autoload Composer est là pour Stripe
-
-// Configuration Stripe (Utilisez vos clés API Secrètes)
-\Stripe\Stripe::setApiKey('sk_test_...'); // REMPLACEZ PAR VOTRE CLÉ SECRÈTE
-
 header('Content-Type: application/json');
 
-// Récupération JSON
+if (session_status() === PHP_SESSION_NONE) session_start();
+if (!isset($_SESSION['user']['id'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Non autorisé']);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
-$token = $input['token'] ?? '';
-$points = intval($input['points'] ?? 0);
+$packKey = $input['pack'] ?? ''; 
+$token = $input['token'] ?? null;
+$organisateurId = $input['organisateur_id'] ?? null;
 
-if (empty($token) || $points <= 0) {
-    echo json_encode(['error' => 'Données invalides']);
+if (empty($packKey) || (!$token && !$organisateurId)) {
+    echo json_encode(['error' => 'Données manquantes']);
     exit;
 }
 
-// Vérification du camp en BDD
-$stmt = $pdo->prepare("SELECT id, nom FROM camps WHERE token = ?");
-$stmt->execute([$token]);
-$camp = $stmt->fetch();
+// Logique pour déterminer la cible (Organisme) et l'URL de retour
+$nomStructure = "Votre Compte";
+$successUrl = "";
+$cancelUrl = "";
+$finalOrgaId = 0;
 
-if (!$camp) {
-    echo json_encode(['error' => 'Séjour introuvable']);
-    exit;
-}
-
-// --- CALCUL DU PRIX (LOGIQUE MÉTIER) ---
-// On calcule tout en centimes pour Stripe
-$amountCentimes = 0;
-
-if ($points == 100) {
-    $amountCentimes = 499; // 4.99€
-} elseif ($points == 500) {
-    $amountCentimes = 999; // 9.99€
-} elseif ($points == 1000) {
-    $amountCentimes = 1499; // 14.99€
-} elseif ($points > 1000) {
-    // Formule : Base 14.99€ + 0.01€ par point supplémentaire
-    // 1499 centimes + (points supp * 1 centime)
-    // Incrément de 10 géré par le frontend, mais on accepte tout > 1000 ici
-    $extraPoints = $points - 1000;
-    $amountCentimes = 1499 + ($extraPoints * 1); // 1 centime par point
-} else {
-    echo json_encode(['error' => 'Montant de points invalide']);
-    exit;
-}
-
-// Nom du produit pour Stripe
-$productName = "Boost Visibilité: " . $points . " points";
-$productDesc = "Pour le séjour: " . $camp['nom'];
+$baseUrl = defined('BASE_URL') ? BASE_URL : 'https://moncamp.fr/';
+$baseUrl = rtrim($baseUrl, '/');
 
 try {
-    $domain = "https://votre-site.com"; // REMPLACEZ PAR VOTRE URL EN PROD
+    if ($token) {
+        // CAS 1 : Achat depuis la page d'un camp (boost.php)
+        $stmt = $pdo->prepare("
+            SELECT c.organisateur_id, o.nom, c.token 
+            FROM camps c 
+            JOIN organisateurs o ON c.organisateur_id = o.id 
+            WHERE c.token = ?
+        ");
+        $stmt->execute([$token]);
+        $data = $stmt->fetch();
+        
+        if (!$data) throw new Exception("Séjour introuvable");
+        
+        $finalOrgaId = $data['organisateur_id'];
+        $nomStructure = $data['nom'];
+        
+        $successUrl = $baseUrl . '/boost.php?t=' . $token . '&success=true';
+        $cancelUrl = $baseUrl . '/boost.php?t=' . $token;
 
+    } elseif ($organisateurId) {
+        // CAS 2 : Achat depuis le dashboard marketing (marketing.php)
+        $stmt = $pdo->prepare("SELECT id, nom FROM organisateurs WHERE id = ? AND user_id = ?");
+        $stmt->execute([$organisateurId, $_SESSION['user']['id']]);
+        $data = $stmt->fetch();
+
+        if (!$data) throw new Exception("Organisme introuvable ou non autorisé");
+
+        $finalOrgaId = $data['id'];
+        $nomStructure = $data['nom'];
+        
+        $successUrl = $baseUrl . '/marketing.php?id=' . $organisateurId . '&success=true';
+        $cancelUrl = $baseUrl . '/marketing.php?id=' . $organisateurId;
+    }
+
+    // --- PRIX DES PACKS (Centimes) ---
+    $packs = [
+        'decouverte' => ['name' => 'Pack Découverte', 'points' => 100, 'amount' => 1000], // 10.00€
+        'standard'   => ['name' => 'Pack Standard',   'points' => 600, 'amount' => 5000], // 50.00€
+        'agence'     => ['name' => 'Pack Agence',     'points' => 1500, 'amount' => 10000] // 100.00€
+    ];
+
+    if (!isset($packs[$packKey])) throw new Exception("Pack invalide");
+    $pack = $packs[$packKey];
+
+    // Session Stripe
     $checkout_session = \Stripe\Checkout\Session::create([
         'payment_method_types' => ['card'],
         'line_items' => [[
             'price_data' => [
                 'currency' => 'eur',
-                'unit_amount' => $amountCentimes, // Montant calculé
+                'unit_amount' => $pack['amount'],
                 'product_data' => [
-                    'name' => $productName,
-                    'description' => $productDesc,
+                    'name' => $pack['name'] . " (" . $pack['points'] . " pts)",
+                    'description' => "Crédits marketing pour : $nomStructure.",
                 ],
             ],
             'quantity' => 1,
         ]],
         'mode' => 'payment',
-        'success_url' => $domain . '/boost.php?t=' . $token . '&success=true',
-        'cancel_url' => $domain . '/boost.php?t=' . $token,
+        'success_url' => $successUrl,
+        'cancel_url' => $cancelUrl,
         'metadata' => [
-            'type' => 'boost_camp',      // IDENTIFIANT IMPORTANT POUR LE WEBHOOK
-            'camp_id' => $camp['id'],    // ID du camp à créditer
-            'camp_token' => $token,
-            'points_amount' => $points   // Nombre de points à ajouter
+            'type' => 'buy_points', 
+            'organisateur_id' => $finalOrgaId, // ID vital pour le webhook
+            'points_amount' => $pack['points']
         ],
     ]);
 
     echo json_encode(['id' => $checkout_session->id]);
 
 } catch (Exception $e) {
+    http_response_code(500);
     echo json_encode(['error' => $e->getMessage()]);
 }
 ?>
